@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AUTO FOCUS UTBK</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
+<style>
+body{background:#07070f;color:#e5e7ef;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+body::before,body::after{content:"";position:fixed;width:420px;height:420px;border-radius:50%;filter:blur(110px);opacity:.28;z-index:-1}
+body::before{background:#8B5CF6;top:-120px;left:-100px}body::after{background:#06B6D4;bottom:-140px;right:-100px}
+.glass{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:1rem}
+.btn{transition:transform .15s,box-shadow .2s,border-color .2s}.btn:hover{transform:translateY(-2px)}.btn:active{transform:scale(.95)}
+.pri{background:linear-gradient(135deg,#8B5CF6,#06B6D4);color:#fff;font-weight:600}.pri:hover{box-shadow:0 0 22px rgba(139,92,246,.55)}
+.ghost{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}.ghost:hover,.ghost.act{border-color:#06B6D4;color:#67e8f9}
+.inp{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:.6rem;padding:.5rem .7rem;width:100%;color:#fff;outline:none}.inp:focus{border-color:#8B5CF6}
+select.inp option{background:#14142a}
+.view{display:none}.view.on{display:block;animation:f .3s}@keyframes f{from{opacity:0;transform:translateY(6px)}}
+.opt{transition:all .15s}.opt:hover{border-color:#06B6D4}.opt.sel{border-color:#8B5CF6;background:rgba(139,92,246,.22)}.opt.ok{border-color:#22c55e;background:rgba(34,197,94,.18)}.opt.no{border-color:#ef4444;background:rgba(239,68,68,.18)}
+.g{width:2.4rem;height:2.4rem;border-radius:.6rem;font-weight:600;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
+.g.cur{outline:2px solid #06B6D4}.g.ans{background:#8B5CF6}.g.dbt{background:#f59e0b;color:#000}.g.good{background:#22c55e;color:#000}.g.bad{background:#ef4444}
+button:focus-visible,input:focus-visible{outline:2px solid #06B6D4;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body class="min-h-screen pb-24 md:pb-8">
+<header class="sticky top-0 z-20 glass rounded-none border-x-0 border-t-0"><div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+<i data-lucide="crosshair" class="text-cyan-400"></i><b class="tracking-wide">AUTO FOCUS <span class="text-violet-400">UTBK</span></b>
+<button id="plan" class="btn ghost text-xs px-2.5 py-1 rounded-full font-semibold" title="Ganti status"></button>
+<nav id="top" class="hidden md:flex gap-2 ml-auto"></nav></div></header>
+<main class="max-w-5xl mx-auto px-4 py-6">
+<section id="v-dash" class="view">
+<h1 id="hi" class="text-2xl font-bold mb-4"></h1>
+<div class="grid md:grid-cols-2 gap-4">
+<div class="glass p-5 space-y-3"><div class="font-semibold flex gap-2 items-center"><i data-lucide="user-round" class="text-violet-400"></i>Profil dan target</div>
+<label class="block text-sm text-slate-400">Nama panggilan<input id="pn" class="inp mt-1" placeholder="Contoh: Rani"></label>
+<label class="block text-sm text-slate-400">Status<select id="ps" class="inp mt-1"><option>Kelas 12</option><option>Gap Year</option></select></label>
+<label class="block text-sm text-slate-400">Target PTN dan jurusan<input id="pt" class="inp mt-1" placeholder="Contoh: UGM - Teknologi Informasi"></label></div>
+<div class="grid grid-cols-3 gap-3 content-start" id="stats"></div></div>
+<div class="glass p-5 mt-4 flex flex-wrap gap-3 items-center"><span class="text-slate-300 mr-auto">Mulai dari mana?</span>
+<button onclick="start('mix')" class="btn pri rounded-lg px-4 py-2">Simulasi 10 soal campuran</button>
+<button onclick="show('bank')" class="btn ghost rounded-lg px-4 py-2">Pilih subtes</button></div></section>
+<section id="v-bank" class="view"><h2 class="text-xl font-bold mb-4">Bank soal dan subtes</h2><div id="bank" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div></section>
+<section id="v-quiz" class="view"></section>
+<section id="v-ai" class="view"><h2 class="text-xl font-bold mb-3">AI UTBK Assistant</h2>
+<div class="glass p-4"><div id="msgs" class="space-y-3 h-[45vh] overflow-y-auto pr-1"><div class="bg-white/5 rounded-xl p-3 w-fit max-w-[90%]">Halo! Tanya soal materi UTBK, rumus cepat, atau peluang masuk PTN targetmu.</div></div>
+<div id="chips" class="flex flex-wrap gap-2 mt-3"></div>
+<div class="flex gap-2 mt-3"><input id="ci" class="inp" placeholder="Tulis pertanyaan..."><button onclick="send()" class="btn pri rounded-lg px-4" aria-label="Kirim"><i data-lucide="send"></i></button></div></div></section>
+</main>
+<nav id="bot" class="md:hidden fixed bottom-0 inset-x-0 z-20 glass rounded-none border-x-0 border-b-0 grid grid-cols-4"></nav>
+<div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-30 glass px-4 py-2 text-sm hidden"></div>
+<script>
+const S=[{k:'pu',n:'Penalaran Umum',g:'TPS',i:'brain'},{k:'pbm',n:'Pemahaman Bacaan & Menulis',g:'TPS',i:'pen-line'},{k:'ppu',n:'Pengetahuan & Pemahaman Umum',g:'TPS',i:'globe'},{k:'pk',n:'Pengetahuan Kuantitatif',g:'TPS',i:'calculator'},{k:'lbi',n:'Literasi Bahasa Indonesia',g:'Literasi',i:'book-open'},{k:'lbe',n:'Literasi Bahasa Inggris',g:'Literasi',i:'languages'},{k:'pm',n:'Penalaran Matematika',g:'Matematika',i:'sigma'}];
+const Q=[
+['pu','Semua mahasiswa rajin belajar. Budi adalah mahasiswa. Kesimpulan yang pasti benar adalah...',['Budi tidak rajin belajar','Budi rajin belajar','Sebagian Budi rajin belajar','Semua yang rajin belajar adalah mahasiswa','Tidak dapat disimpulkan'],1,'Premis umum "semua mahasiswa rajin" berlaku untuk setiap mahasiswa, termasuk Budi. Jadi Budi rajin belajar.','Pola silogisme: Semua A adalah B, x adalah A, maka x adalah B. Opsi yang membalik arah (D) hampir selalu jebakan.'],
+['pu','Lanjutkan pola: 2, 6, 12, 20, 30, ...',['40','42','44','36','38'],1,'Selisih antar suku: 4, 6, 8, 10, maka selisih berikutnya 12. Suku berikutnya 30 + 12 = 42.','Suku ke-n = n(n+1): 1x2, 2x3, 3x4, 4x5, 5x6, maka 6x7 = 42.'],
+['pbm','Kalimat yang efektif adalah...',['Para hadirin-hadirin dimohon berdiri.','Hadirin dimohon berdiri.','Para hadirin sekalian dimohon berdiri.','Daripada hadirin dimohon berdiri.','Hadirin-hadirin sekalian dimohon berdiri.'],1,'Kata "hadirin" sudah bermakna jamak, sehingga "para", pengulangan, dan "sekalian" mubazir.','Cari pemborosan kata: jamak ganda, sinonim berdampingan, atau kata yang maknanya sudah terwakili.'],
+['pbm','Kata baku yang benar adalah...',['analisa','nasehat','risiko','praktek','sistim'],2,'Bentuk baku menurut KBBI: analisis, nasihat, risiko, praktik, sistem. Hanya "risiko" yang sudah baku.','Hafalkan pasangan umum: analisa-analisis, nasehat-nasihat, praktek-praktik, sistim-sistem.'],
+['ppu','Antonim kata "transparan" adalah...',['jelas','tertutup','bening','terbuka','nyata'],1,'Transparan berarti terbuka atau tembus pandang. Lawannya adalah tertutup.','Ubah kata ke makna dasarnya dulu, lalu cari lawan langsungnya, bukan sekadar yang "terasa" berbeda.'],
+['ppu','Mitigasi bencana berarti...',['upaya mengurangi risiko bencana','penanganan setelah bencana','peringatan dini saja','evakuasi korban','pendataan kerugian'],0,'Mitigasi adalah tindakan mengurangi risiko atau dampak bencana sebelum bencana terjadi.','Imbuhan: mitigasi = sebelum, tanggap darurat = saat, rehabilitasi = sesudah.'],
+['pk','Jika x + y = 10 dan x - y = 4, nilai xy adalah...',['18','20','21','24','28'],2,'Jumlahkan kedua persamaan: 2x = 14 maka x = 7, y = 3. Jadi xy = 21.','Rumus kilat: xy = ((x+y)² - (x-y)²) / 4 = (100 - 16) / 4 = 21.'],
+['pk','25% dari 240 ditambah 10% dari 150 adalah...',['65','70','75','80','85'],2,'25% x 240 = 60 dan 10% x 150 = 15. Jumlahnya 75.','25% = seperempat, 10% = geser koma satu angka. Tidak perlu perkalian panjang.'],
+['lbi','Kota-kota besar kian padat. Transportasi publik yang memadai dapat mengurangi kemacetan dan polusi. Karena itu, pemerintah perlu memprioritaskan pembangunannya. Gagasan utama paragraf ini adalah...',['Kota besar semakin padat','Transportasi publik perlu diprioritaskan untuk mengatasi kemacetan dan polusi','Polusi terus meningkat','Pemerintah lamban bekerja','Warga enggan naik angkutan umum'],1,'Kalimat terakhir memuat tuntutan inti, dan kalimat sebelumnya menjadi alasannya.','Cari kalimat yang diawali kata penyimpul (karena itu, jadi, dengan demikian): biasanya itu gagasan utama.'],
+['lbi','Penulisan huruf kapital yang tepat adalah...',['Dia berasal dari Kota medan.','Kami berlibur ke Danau Toba.','Ayah bekerja di kantor Pos.','Adik bersekolah di sma negeri.','ibu membeli buku.'],1,'Nama geografi diawali huruf kapital: Danau Toba. Opsi lain salah kapital pada Medan, pos, SMA, dan awal kalimat.','Cek tiga hal: awal kalimat, nama diri/tempat, dan singkatan resmi.'],
+['lbe','She has been studying English ___ five years.',['since','for','during','from','at'],1,'"For" dipakai untuk durasi (five years). "Since" dipakai untuk titik waktu awal.','Durasi = for, titik awal = since. Tanda: has/have been + angka waktu.'],
+['lbe','Solar panels convert sunlight into electricity. They are increasingly affordable, which encourages households to switch to renewable energy. What encourages households to switch?',['Strict laws','Falling prices','Bad weather','Fuel shortages','Advertising'],1,'"Increasingly affordable" berarti harga makin terjangkau, jadi Falling prices.','Cari kata penghubung "which encourages": penyebab ada tepat sebelum kata itu.'],
+['pm','Diketahui f(x) = 2x + 3 dan g(x) = x². Nilai (g∘f)(1) adalah...',['5','16','25','36','49'],2,'(g∘f)(1) = g(f(1)). f(1) = 5, lalu g(5) = 25.','Komposisi dikerjakan dari fungsi paling dalam: f dulu, baru g.'],
+['pm','Barang Rp100.000 didiskon 20% lalu 10%. Harga akhirnya adalah...',['Rp70.000','Rp72.000','Rp75.000','Rp80.000','Rp90.000'],1,'Setelah 20%: 80.000. Setelah 10%: 80.000 x 0,9 = 72.000.','Diskon bertingkat tidak dijumlah: 0,8 x 0,9 = 0,72 maka bayar 72%.']];
+const $=s=>document.querySelector(s),ic=()=>lucide.createIcons();
+const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let P=LS('afu_p',{name:'',status:'Kelas 12',target:'',pro:false}),T=LS('afu_s',{total:0,ok:0,streak:0,last:''}),Z=null,chat=[],cur='dash';
+const NAV=[['dash','Dashboard','Dashboard','layout-dashboard'],['bank','Bank Soal & Subtes','Bank Soal','library'],['quiz','Simulasi Kuis','Kuis','timer'],['ai','AI UTBK Assistant','AI','bot']];
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(t.h);t.h=setTimeout(()=>t.classList.add('hidden'),2200)}
+function nav(){$('#top').innerHTML=NAV.map(n=>`<button onclick="show('${n[0]}')" class="btn ghost ${cur==n[0]?'act':''} rounded-lg px-3 py-1.5 text-sm">${n[1]}</button>`).join('');
+$('#bot').innerHTML=NAV.map(n=>`<button onclick="show('${n[0]}')" class="py-2.5 flex flex-col items-center text-xs gap-1 ${cur==n[0]?'text-cyan-300':'text-slate-400'}"><i data-lucide="${n[3]}"></i>${n[2]}</button>`).join('')}
+function show(v){cur=v;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id=='v-'+v));if(v=='quiz')rq();nav();ic();scrollTo(0,0)}
+function plan(){const b=$('#plan');b.textContent=P.pro?'PRO':'FREE';b.className='btn text-xs px-2.5 py-1 rounded-full font-semibold '+(P.pro?'pri':'ghost')}
+$('#plan').onclick=()=>{P.pro=!P.pro;sv('afu_p',P);plan()};
+function st(){const a=T.total?Math.round(T.ok/T.total*100):0;$('#stats').innerHTML=[['Soal diperiksa',T.total,'check-check'],['Rata-rata akurasi',a+'%','target'],['Hari streak',T.streak,'flame']].map(s=>`<div class="glass p-3 text-center"><i data-lucide="${s[2]}" class="mx-auto text-cyan-400 mb-1"></i><div class="text-2xl font-bold">${s[1]}</div><div class="text-xs text-slate-400">${s[0]}</div></div>`).join('');ic()}
+function hi(){$('#hi').textContent='Halo, '+(P.name||'calon mahasiswa')+'!'}
+$('#pn').value=P.name;$('#ps').value=P.status;$('#pt').value=P.target;
+[['#pn','name'],['#ps','status'],['#pt','target']].forEach(([s,k])=>$(s).oninput=e=>{P[k]=e.target.value;sv('afu_p',P);hi()});
+$('#bank').innerHTML=S.map(s=>`<div class="glass p-4 flex flex-col gap-3"><div class="flex items-center gap-3"><span class="p-2 rounded-lg bg-violet-500/20 text-cyan-300"><i data-lucide="${s.i}"></i></span><div><div class="font-semibold leading-tight">${s.n}</div><div class="text-xs text-slate-400">${s.g}: ${Q.filter(x=>x[0]==s.k).length} soal</div></div></div><button onclick="start('${s.k}')" class="btn pri rounded-lg py-2">Mulai latihan</button></div>`).join('');
+function day(){const t=new Date().toISOString().slice(0,10),y=new Date(Date.now()-864e5).toISOString().slice(0,10);if(T.last!=t){T.streak=T.last==y?T.streak+1:1;T.last=t}}
+function start(k){if(Z)clearInterval(Z.h);const l=k=='mix'?[...Q].sort(()=>Math.random()-.5).slice(0,10):Q.filter(x=>x[0]==k);Z={l,i:0,a:{},d:{},c:{},t:l.length*90,k};Z.h=setInterval(()=>{Z.t--;if(Z.t<=0)finish();tm()},1000);show('quiz')}
+function tm(){const e=$('#tm');if(e&&Z)e.textContent=String(Math.floor(Z.t/60)).padStart(2,'0')+':'+String(Z.t%60).padStart(2,'0')}
+function pick(i){if(Z.c[Z.i])return;Z.a[Z.i]=i;rq()}
+function dbt(){if(Z.c[Z.i])return;Z.d[Z.i]=!Z.d[Z.i];rq()}
+function go(i){Z.i=i;rq()}
+function chk(){if(Z.c[Z.i])return;if(Z.a[Z.i]===undefined)return toast('Pilih jawaban dulu.');Z.c[Z.i]=1;Z.d[Z.i]=0;const ok=Z.a[Z.i]==Z.l[Z.i][3];T.total++;if(ok)T.ok++;day();sv('afu_s',T);st();rq()}
+function finish(){clearInterval(Z.h);Z.l.forEach((q,i)=>{if(!Z.c[i]){Z.c[i]=1;if(Z.a[i]!==undefined){T.total++;if(Z.a[i]==q[3])T.ok++;day()}}});sv('afu_s',T);st();Z.done=1;if(cur=='quiz')rq()}
+function rq(){const v=$('#v-quiz');
+if(!Z){v.innerHTML=`<div class="glass p-6 text-center space-y-3"><i data-lucide="timer" class="mx-auto text-violet-400"></i><p>Belum ada sesi berjalan.</p><button onclick="start('mix')" class="btn pri rounded-lg px-5 py-2">Mulai simulasi 10 soal</button></div>`;ic();return}
+if(Z.done){const n=Z.l.length,b=Z.l.filter((q,i)=>Z.a[i]==q[3]).length;v.innerHTML=`<div class="glass p-6 text-center space-y-3"><div class="text-4xl font-bold">${b}/${n}</div><p class="text-slate-300">Akurasi sesi ini ${Math.round(b/n*100)}%</p><div class="flex gap-3 justify-center flex-wrap"><button onclick="Z.done=0;Z.i=0;rq()" class="btn pri rounded-lg px-4 py-2">Lihat pembahasan</button><button onclick="show('bank')" class="btn ghost rounded-lg px-4 py-2">Latihan lain</button></div></div>`;return}
+const q=Z.l[Z.i],c=Z.c[Z.i],nm=Z.k=='mix'?'Simulasi campuran':S.find(s=>s.k==Z.k).n,L='ABCDE';
+v.innerHTML=`<div class="flex items-center justify-between mb-3"><div class="font-semibold">${nm}</div><div class="glass px-3 py-1 flex gap-2 items-center text-cyan-300"><i data-lucide="clock" class="w-4 h-4"></i><span id="tm"></span></div></div>
+<div class="flex flex-wrap gap-2 mb-2">${Z.l.map((x,i)=>`<button onclick="go(${i})" class="btn g ${i==Z.i?'cur':''} ${Z.c[i]?(Z.a[i]==x[3]?'good':'bad'):Z.d[i]?'dbt':Z.a[i]!==undefined?'ans':''}">${i+1}</button>`).join('')}</div>
+<div class="text-xs text-slate-400 mb-4">Ungu: terpilih. Kuning: ragu-ragu. Hijau/merah: sudah diperiksa.</div>
+<div class="glass p-5 space-y-4"><p class="text-lg leading-relaxed">${Z.i+1}. ${q[1]}</p>
+<div class="space-y-2">${q[2].map((o,i)=>`<button onclick="pick(${i})" class="opt w-full text-left rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex gap-3 ${c?(i==q[3]?'ok':Z.a[Z.i]==i?'no':''):Z.a[Z.i]==i?'sel':''}"><b class="text-cyan-300">${L[i]}</b><span>${o}</span></button>`).join('')}</div>
+<div class="flex flex-wrap gap-2"><button onclick="dbt()" class="btn ghost rounded-lg px-4 py-2 flex gap-2 items-center ${Z.d[Z.i]?'act':''}"><i data-lucide="flag" class="w-4 h-4"></i>Ragu-ragu</button><button onclick="chk()" class="btn pri rounded-lg px-4 py-2">Periksa jawaban</button></div>
+${c?`<div class="rounded-xl bg-violet-500/10 border border-violet-400/30 p-4 space-y-2"><div class="font-semibold">${Z.a[Z.i]==q[3]?'Jawaban benar':'Jawaban benar: '+L[q[3]]}</div><p><b class="text-violet-300">Langkah pengerjaan.</b> ${q[4]}</p><p><b class="text-cyan-300">Trik cerdas.</b> ${q[5]}</p></div>`:''}</div>
+<div class="flex justify-between mt-4"><button ${Z.i?'':'disabled'} onclick="go(${Z.i-1})" class="btn ghost rounded-lg px-4 py-2 disabled:opacity-30">Sebelumnya</button><button onclick="finish()" class="btn ghost rounded-lg px-4 py-2">Selesai</button><button ${Z.i<Z.l.length-1?'':'disabled'} onclick="go(${Z.i+1})" class="btn ghost rounded-lg px-4 py-2 disabled:opacity-30">Berikutnya</button></div>`;tm();ic()}
+function am(r,t){const d=document.createElement('div');d.className=r=='user'?'bg-violet-500/30 rounded-xl p-3 w-fit max-w-[90%] ml-auto':'bg-white/5 rounded-xl p-3 w-fit max-w-[90%] whitespace-pre-wrap';d.textContent=t;$('#msgs').append(d);d.scrollIntoView({block:'end'});return d}
+async function send(t){t=(t||$('#ci').value).trim();if(!t)return;$('#ci').value='';chat.push({role:'user',content:t});am('user',t);const w=am('bot','Mengetik...');
+try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chat,ctx:{nama:P.name,status:P.status,target:P.target,soal:T.total,akurasi:T.total?Math.round(T.ok/T.total*100):null}})});const d=await r.json();if(!r.ok)throw new Error(d.error||r.status);w.textContent=d.reply;chat.push({role:'assistant',content:d.reply})}
+catch(e){w.textContent='Asisten belum tersambung ('+e.message+'). Pastikan GEMINI_API_KEY sudah diisi di pengaturan hosting dan folder api/ ikut ter-deploy.';chat.pop()}}
+$('#ci').onkeydown=e=>{if(e.key=='Enter')send()};
+$('#chips').innerHTML=['Bantu jelaskan rumus cepat Penalaran Matematika','Tips lulus UGM SNBT','Trik cepat Penalaran Umum TPS','Prediksi peluang lulus PTN targetku dari nilai kuis'].map(c=>`<button class="btn ghost rounded-full px-3 py-1.5 text-sm text-left">${c}</button>`).join('');
+document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>send(b.textContent));
+plan();hi();st();show('dash');
+</script></body></html>
